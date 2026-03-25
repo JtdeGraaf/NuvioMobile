@@ -64,6 +64,10 @@ interface PlayerControlsProps {
   isAirPlayActive?: boolean;
   allowsAirPlay?: boolean;
   onAirPlayPress?: () => void;
+  // Chromecast props
+  isCastAvailable?: boolean;
+  isCastConnected?: boolean;
+  onCastPress?: () => void;
   // MPV Switch (Android only)
   onSwitchToMPV?: () => void;
   useExoPlayer?: boolean;
@@ -114,6 +118,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   isAirPlayActive,
   allowsAirPlay,
   onAirPlayPress,
+  isCastAvailable,
+  isCastConnected,
+  onCastPress,
   onSwitchToMPV,
   useExoPlayer,
   canEnterPictureInPicture,
@@ -377,6 +384,19 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               )}
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {/* Chromecast Button */}
+              {isCastAvailable && onCastPress && (
+                <TouchableOpacity
+                  style={{ padding: 8 }}
+                  onPress={onCastPress}
+                >
+                  <Ionicons
+                    name={isCastConnected ? "tv" : "tv-outline"}
+                    size={closeIconSize}
+                    color={isCastConnected ? currentTheme.colors.primary : "white"}
+                  />
+                </TouchableOpacity>
+              )}
               {/* AirPlay Button - iOS only, KSAVPlayer only */}
               {Platform.OS === 'ios' && onAirPlayPress && playerBackend === 'KSAVPlayer' && (
                 <TouchableOpacity

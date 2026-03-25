@@ -45,7 +45,9 @@ import { CustomSubtitles } from './subtitles/CustomSubtitles';
 import ParentalGuideOverlay from './overlays/ParentalGuideOverlay';
 import SkipIntroButton from './overlays/SkipIntroButton';
 import UpNextButton from './common/UpNextButton';
+import CastOverlay from './overlays/CastOverlay';
 import { CustomAlert } from '../CustomAlert';
+import { useCastPlayback } from './hooks/useCastPlayback';
 
 
 // Android-specific components
@@ -281,6 +283,42 @@ const AndroidVideoPlayer: React.FC = () => {
     tmdbId: currentTmdbId,
     enabled: settings.skipIntroEnabled
   });
+
+  // Chromecast integration
+  const castPlayback = useCastPlayback({
+    uri: currentStreamUrl,
+    title,
+    episodeTitle,
+    season,
+    episode,
+    type: type as 'movie' | 'series',
+    imageUrl: backdrop || (metadata as any)?.backdrop,
+    headers,
+    currentTime: playerState.currentTime,
+    duration: playerState.duration,
+    paused: playerState.paused,
+    onCastStart: () => {
+      // Pause local playback when cast starts
+      playerState.setPaused(true);
+      logger.info('[AndroidVideoPlayer] Cast started, pausing local playback');
+    },
+    onCastEnd: (position) => {
+      // Resume local playback at cast position when cast ends
+      logger.info(`[AndroidVideoPlayer] Cast ended at position ${position}, resuming local playback`);
+      if (position > 0) {
+        controlsHook.seekToTime(position);
+      }
+      playerState.setPaused(false);
+    },
+  });
+
+  // Pause local playback immediately when cast connects
+  useEffect(() => {
+    if (castPlayback.isCastConnected && !playerState.paused) {
+      logger.info('[AndroidVideoPlayer] Cast connected, pausing local playback');
+      playerState.setPaused(true);
+    }
+  }, [castPlayback.isCastConnected]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -1127,6 +1165,9 @@ const AndroidVideoPlayer: React.FC = () => {
           buffered={playerState.buffered}
           formatTime={formatTime}
           playerBackend={useExoPlayer ? 'ExoPlayer' : 'MPV'}
+          isCastAvailable={castPlayback.isCastAvailable}
+          isCastConnected={castPlayback.isCastConnected}
+          onCastPress={castPlayback.onCastPress}
           onSwitchToMPV={handleManualSwitchToMPV}
           useExoPlayer={useExoPlayer}
           canEnterPictureInPicture={canShowPipButton}
@@ -1203,6 +1244,26 @@ const AndroidVideoPlayer: React.FC = () => {
           controlsVisible={playerState.showControls}
           controlsFixedOffset={100}
           outroSegment={outroSegment}
+        />
+
+        {/* Cast Overlay - shown when actively casting */}
+        <CastOverlay
+          visible={castPlayback.isCasting}
+          deviceName={castPlayback.castDeviceName}
+          title={title}
+          episodeTitle={episodeTitle}
+          season={season}
+          episode={episode}
+          imageUrl={backdrop || (metadata as any)?.backdrop}
+          currentTime={castPlayback.castPosition}
+          duration={castPlayback.castDuration}
+          isPaused={castPlayback.castIsPaused}
+          isBuffering={castPlayback.castIsBuffering}
+          onPlay={castPlayback.castPlay}
+          onPause={castPlayback.castPause}
+          onSeek={castPlayback.castSeek}
+          onStop={castPlayback.stopCasting}
+          formatTime={formatTime}
         />
       </View>
 

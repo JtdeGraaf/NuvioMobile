@@ -21,7 +21,9 @@ import CustomSubtitles from './subtitles/CustomSubtitles';
 import ResumeOverlay from './modals/ResumeOverlay';
 import ParentalGuideOverlay from './overlays/ParentalGuideOverlay';
 import SkipIntroButton from './overlays/SkipIntroButton';
+import CastOverlay from './overlays/CastOverlay';
 import { SpeedActivatedOverlay, PauseOverlay, GestureControls } from './components';
+import { useCastPlayback } from './hooks/useCastPlayback';
 
 // Platform-specific components
 import { KSPlayerSurface } from './ios/components/KSPlayerSurface';
@@ -278,6 +280,34 @@ const KSPlayerCore: React.FC = () => {
     false, // KSPlayer doesn't support PiP yet
     metadata?.name
   );
+
+  // Chromecast integration
+  const castPlayback = useCastPlayback({
+    uri,
+    title,
+    episodeTitle,
+    season,
+    episode,
+    type: type as 'movie' | 'series',
+    imageUrl: backdrop || (metadata as any)?.backdrop,
+    headers,
+    currentTime,
+    duration,
+    paused,
+    onCastStart: () => {
+      // Pause local playback when cast starts
+      setPaused(true);
+      logger.info('[KSPlayerCore] Cast started, pausing local playback');
+    },
+    onCastEnd: (position) => {
+      // Resume local playback at cast position when cast ends
+      logger.info(`[KSPlayerCore] Cast ended at position ${position}, resuming local playback`);
+      if (position > 0) {
+        controls.seekToTime(position);
+      }
+      setPaused(false);
+    },
+  });
 
   // Gestures
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -979,6 +1009,9 @@ const KSPlayerCore: React.FC = () => {
             isAirPlayActive={isAirPlayActive}
             allowsAirPlay={allowsAirPlay}
             onAirPlayPress={() => ksPlayerRef.current?.showAirPlayPicker()}
+            isCastAvailable={castPlayback.isCastAvailable}
+            isCastConnected={castPlayback.isCastConnected}
+            onCastPress={castPlayback.onCastPress}
             isBuffering={isBuffering}
             imdbId={imdbId}
           />
@@ -1072,6 +1105,26 @@ const KSPlayerCore: React.FC = () => {
         controlsVisible={showControls}
         controlsFixedOffset={126}
         outroSegment={outroSegment}
+      />
+
+      {/* Cast Overlay - shown when actively casting */}
+      <CastOverlay
+        visible={castPlayback.isCasting}
+        deviceName={castPlayback.castDeviceName}
+        title={title}
+        episodeTitle={episodeTitle}
+        season={season}
+        episode={episode}
+        imageUrl={backdrop || (metadata as any)?.backdrop}
+        currentTime={castPlayback.castPosition}
+        duration={castPlayback.castDuration}
+        isPaused={castPlayback.castIsPaused}
+        isBuffering={castPlayback.castIsBuffering}
+        onPlay={castPlayback.castPlay}
+        onPause={castPlayback.castPause}
+        onSeek={castPlayback.castSeek}
+        onStop={castPlayback.stopCasting}
+        formatTime={formatTime}
       />
 
       {/* Modals */}

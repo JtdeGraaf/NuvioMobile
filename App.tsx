@@ -33,6 +33,7 @@ import { TraktProvider } from './src/contexts/TraktContext';
 import { SimklProvider } from './src/contexts/SimklContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { TrailerProvider } from './src/contexts/TrailerContext';
+import { CastProvider } from './src/contexts/CastContext';
 import { DownloadsProvider } from './src/contexts/DownloadsContext';
 import SplashScreen from './src/components/SplashScreen';
 import UpdatePopup from './src/components/UpdatePopup';
@@ -300,11 +301,13 @@ function App(): React.JSX.Element {
               <TraktProvider>
                 <SimklProvider>
                   <ThemeProvider>
-                    <TrailerProvider>
-                      <ToastProvider>
-                        <ThemedApp />
-                      </ToastProvider>
-                    </TrailerProvider>
+                    <CastProvider>
+                      <TrailerProvider>
+                        <ToastProvider>
+                          <ThemedApp />
+                        </ToastProvider>
+                      </TrailerProvider>
+                    </CastProvider>
                   </ThemeProvider>
                 </SimklProvider>
               </TraktProvider>
