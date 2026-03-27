@@ -17,17 +17,12 @@
   </queries>
   <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false">
     <meta-data android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME" android:value="com.reactnative.googlecast.GoogleCastOptionsProvider"/>
-    <meta-data android:name="com.reactnative.googlecast.RECEIVER_APPLICATION_ID" android:value="CC1AD845"/>
+    <meta-data android:name="com.reactnative.googlecast.RECEIVER_APPLICATION_ID" android:value="F5AD8298"/>
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="true"/>
     <meta-data android:name="expo.modules.updates.EXPO_RUNTIME_VERSION" android:value="@string/expo_runtime_version"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ERROR_RECOVERY_ONLY"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="30000"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATE_URL" android:value="https://ota.nuvioapp.space/api/manifest"/>
-    <!-- HDR display capability declarations -->
-    <meta-data android:name="android.media.display_hdr10" android:value="true"/>
-    <meta-data android:name="android.media.display_hdr10_plus" android:value="true"/>
-    <meta-data android:name="android.media.display_hlg" android:value="true"/>
-    <meta-data android:name="android.media.display_dolby_vision" android:value="true"/>
     <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout|uiMode|locale|layoutDirection" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="unspecified" android:supportsPictureInPicture="true" android:resizeableActivity="true" android:colorMode="hdr">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
