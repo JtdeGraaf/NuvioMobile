@@ -84,6 +84,7 @@ interface PlayerRouteParams {
   headers?: Record<string, string>;
   releaseDate?: string;
   initialPosition?: number;
+  isDebrid?: boolean;
 }
 
 const KSPlayerCore: React.FC = () => {
@@ -98,7 +99,8 @@ const KSPlayerCore: React.FC = () => {
     uri, title, episodeTitle, season, episode, id, type, quality, year,
     episodeId, imdbId, backdrop, availableStreams,
     headers, streamProvider, streamName, releaseDate,
-    initialPosition: routeInitialPosition
+    initialPosition: routeInitialPosition,
+    isDebrid
   } = params;
 
   const videoType = (params as any)?.videoType as string | undefined;
@@ -291,6 +293,7 @@ const KSPlayerCore: React.FC = () => {
     type: type as 'movie' | 'series',
     imageUrl: backdrop || (metadata as any)?.backdrop,
     headers,
+    isDebrid,
     currentTime,
     duration,
     paused,

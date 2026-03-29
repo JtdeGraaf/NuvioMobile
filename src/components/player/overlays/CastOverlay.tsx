@@ -4,14 +4,15 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FastImage from '@d11/react-native-fast-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Slider from '@react-native-community/slider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { colors } from '../../../styles/colors';
 
 interface CastOverlayProps {
   visible: boolean;
@@ -51,6 +52,7 @@ const CastOverlay: React.FC<CastOverlayProps> = ({
   formatTime,
 }) => {
   const { currentTheme } = useTheme();
+  const insets = useSafeAreaInsets();
 
   if (!visible) return null;
 
@@ -62,18 +64,14 @@ const CastOverlay: React.FC<CastOverlayProps> = ({
     }
   };
 
-  const displayTitle = season && episode
-    ? `S${season}E${episode} - ${episodeTitle || title}`
-    : title;
-
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['rgba(0,0,0,0.9)', 'rgba(0,0,0,0.95)']}
+        colors={[colors.background, colors.background]}
         style={styles.gradient}
       >
         {/* Casting indicator */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <View style={styles.castingIndicator}>
             <Ionicons name="tv" size={20} color={currentTheme.colors.primary} />
             <Text style={[styles.castingText, { color: currentTheme.colors.primary }]}>
@@ -119,7 +117,7 @@ const CastOverlay: React.FC<CastOverlayProps> = ({
             onPress={() => onSeek(Math.max(0, currentTime - 10))}
           >
             <View style={styles.seekButton}>
-              <Ionicons name="play-back" size={28} color="white" />
+              <Ionicons name="play-back" size={28} color={colors.white} />
               <Text style={styles.seekText}>10</Text>
             </View>
           </TouchableOpacity>
@@ -131,12 +129,12 @@ const CastOverlay: React.FC<CastOverlayProps> = ({
             disabled={isBuffering}
           >
             {isBuffering ? (
-              <ActivityIndicator size="large" color="white" />
+              <ActivityIndicator size="large" color={colors.white} />
             ) : (
               <Ionicons
                 name={isPaused ? 'play' : 'pause'}
                 size={40}
-                color="white"
+                color={colors.white}
               />
             )}
           </TouchableOpacity>
@@ -147,14 +145,14 @@ const CastOverlay: React.FC<CastOverlayProps> = ({
             onPress={() => onSeek(Math.min(duration, currentTime + 10))}
           >
             <View style={styles.seekButton}>
-              <Ionicons name="play-forward" size={28} color="white" />
+              <Ionicons name="play-forward" size={28} color={colors.white} />
               <Text style={styles.seekText}>10</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         {/* Progress bar */}
-        <View style={styles.progressContainer}>
+        <View style={[styles.progressContainer, { paddingBottom: insets.bottom + 16 }]}>
           <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
           <Slider
             style={styles.slider}
@@ -163,7 +161,7 @@ const CastOverlay: React.FC<CastOverlayProps> = ({
             value={currentTime}
             onSlidingComplete={onSeek}
             minimumTrackTintColor={currentTheme.colors.primary}
-            maximumTrackTintColor="rgba(255,255,255,0.3)"
+            maximumTrackTintColor={colors.mediumGray}
             thumbTintColor={currentTheme.colors.primary}
           />
           <Text style={styles.timeText}>{formatTime(duration)}</Text>
@@ -180,8 +178,6 @@ const CastOverlay: React.FC<CastOverlayProps> = ({
   );
 };
 
-const { width, height } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
@@ -194,11 +190,11 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
   },
   header: {
     position: 'absolute',
-    top: 40,
+    top: 0,
     left: 24,
     right: 24,
     flexDirection: 'row',
@@ -217,11 +213,11 @@ const styles = StyleSheet.create({
   stopButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.cardHighlight,
     borderRadius: 20,
   },
   stopText: {
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -241,13 +237,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    color: 'white',
+    color: colors.text,
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   episodeInfo: {
-    color: 'rgba(255,255,255,0.7)',
+    color: colors.textMuted,
     fontSize: 16,
   },
   controls: {
@@ -264,7 +260,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   seekText: {
-    color: 'white',
+    color: colors.text,
     fontSize: 12,
     marginTop: 2,
   },
@@ -276,11 +272,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
-    maxWidth: 600,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
   },
   slider: {
     flex: 1,
@@ -288,17 +286,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   timeText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: colors.textMuted,
     fontSize: 14,
     minWidth: 50,
     textAlign: 'center',
   },
   statusContainer: {
-    height: 24,
-    marginTop: 16,
+    position: 'absolute',
+    bottom: 80,
+    alignItems: 'center',
   },
   statusText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: colors.mediumGray,
     fontSize: 14,
   },
 });

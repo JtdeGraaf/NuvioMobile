@@ -434,6 +434,7 @@ export const useStreamsScreen = () => {
         backdrop: metadata?.banner || bannerImage,
         videoType,
         releaseDate,
+        isDebrid: stream.isDebrid || (stream.behaviorHints?.cached !== undefined),
       } as any);
     },
     [metadata, type, currentEpisode, navigation, id, selectedEpisode, imdbId, episodeStreams, groupedStreams, bannerImage, settings.streamCacheTTL]

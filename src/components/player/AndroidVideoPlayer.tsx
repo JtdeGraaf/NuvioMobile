@@ -79,7 +79,8 @@ const AndroidVideoPlayer: React.FC = () => {
   const {
     uri, title = 'Episode Name', season, episode, episodeTitle, quality, year,
     streamProvider, streamName, headers, id, type, episodeId, imdbId,
-    availableStreams: passedAvailableStreams, backdrop, groupedEpisodes, releaseDate
+    availableStreams: passedAvailableStreams, backdrop, groupedEpisodes, releaseDate,
+    isDebrid
   } = route.params;
 
   // --- State & Custom Hooks ---
@@ -294,6 +295,7 @@ const AndroidVideoPlayer: React.FC = () => {
     type: type as 'movie' | 'series',
     imageUrl: backdrop || (metadata as any)?.backdrop,
     headers,
+    isDebrid,
     currentTime: playerState.currentTime,
     duration: playerState.duration,
     paused: playerState.paused,

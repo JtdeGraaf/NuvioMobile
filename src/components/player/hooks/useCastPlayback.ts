@@ -13,6 +13,7 @@ interface UseCastPlaybackOptions {
   type?: 'movie' | 'series';
   imageUrl?: string;
   headers?: Record<string, string>;
+  isDebrid?: boolean; // Flag for debrid streams that need proxying
   currentTime: number;
   duration: number;
   paused: boolean;
@@ -62,6 +63,7 @@ export const useCastPlayback = (options: UseCastPlaybackOptions): UseCastPlaybac
     type,
     imageUrl,
     headers,
+    isDebrid,
     currentTime,
     duration,
     paused,
@@ -150,6 +152,7 @@ export const useCastPlayback = (options: UseCastPlaybackOptions): UseCastPlaybac
       type,
       imageUrl,
       headers,
+      isDebrid,
       startPosition: lastLocalPositionRef.current || 0,
     };
 
@@ -180,6 +183,7 @@ export const useCastPlayback = (options: UseCastPlaybackOptions): UseCastPlaybac
     type,
     imageUrl,
     headers,
+    isDebrid,
     hasHeaderWarning,
     hasShownHeaderWarning,
     onCastStart,

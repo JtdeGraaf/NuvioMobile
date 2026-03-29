@@ -13,6 +13,7 @@ import GoogleCast, {
 } from 'react-native-google-cast';
 import type { MediaMetadata } from 'react-native-google-cast';
 import { logger } from '../utils/logger';
+import { proxyServerService, needsProxying } from '../services/proxyServer';
 
 // Cast media request interface for our app
 export interface CastMediaRequest {
@@ -26,6 +27,7 @@ export interface CastMediaRequest {
   type?: 'movie' | 'series';
   season?: number;
   episode?: number;
+  isDebrid?: boolean; // Flag for debrid streams that need proxying
 }
 
 // Cast context state interface
@@ -74,6 +76,9 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
 
+  // Track if we manually started casting (for custom receivers that return null from load)
+  const [manualCastingActive, setManualCastingActive] = useState(false);
+
   // Progress update subscription ref
   const progressSubscriptionRef = useRef<{ remove: () => void } | null>(null);
 
@@ -92,7 +97,12 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
                                 mediaStatus.playerState === 'buffering' ||
                                 mediaStatus.playerState === 'loading';
 
-      setIsCasting(isActivelyPlaying);
+      // If mediaStatus shows active playback, use that
+      // If manual casting is active and we're connected, stay in casting mode
+      // (custom receivers may not report proper mediaStatus)
+      const shouldBeCasting = isActivelyPlaying || (manualCastingActive && isConnected);
+
+      setIsCasting(shouldBeCasting);
       setIsPaused(mediaStatus.playerState === 'paused');
       setIsBuffering(mediaStatus.playerState === 'buffering' || mediaStatus.playerState === 'loading');
 
@@ -100,13 +110,19 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
         setDuration(mediaStatus.mediaInfo.streamDuration);
       }
 
-      logger.debug(`[CastContext] Media status update - playerState: ${mediaStatus.playerState}, isCasting: ${isActivelyPlaying}`);
+      logger.debug(`[CastContext] Media status update - playerState: ${mediaStatus.playerState}, manualCastingActive: ${manualCastingActive}, isCasting: ${shouldBeCasting}`);
     } else {
-      setIsCasting(false);
+      // No media status - check if manual casting is active
+      if (manualCastingActive && isConnected) {
+        setIsCasting(true);
+        logger.debug(`[CastContext] No media status but manual casting active`);
+      } else {
+        setIsCasting(false);
+      }
       setIsPaused(false);
       setIsBuffering(false);
     }
-  }, [mediaStatus]);
+  }, [mediaStatus, manualCastingActive, isConnected]);
 
   // Subscribe to progress updates when casting
   useEffect(() => {
@@ -138,10 +154,16 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
     };
   }, [client, isCasting]);
 
-  // Log cast state changes
+  // Log cast state changes and reset manual casting when disconnected
   useEffect(() => {
     logger.info(`[CastContext] Cast state: ${castState}, device: ${deviceName}, isConnected: ${isConnected}`);
-  }, [castState, deviceName, isConnected]);
+
+    // Reset manual casting state when disconnected
+    if (!isConnected && manualCastingActive) {
+      logger.info('[CastContext] Disconnected, resetting manual casting state');
+      setManualCastingActive(false);
+    }
+  }, [castState, deviceName, isConnected, manualCastingActive]);
 
   // Log on mount
   useEffect(() => {
@@ -181,6 +203,27 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
     }
 
     try {
+      // Check if this stream needs proxying (debrid streams, auth headers)
+      const shouldProxy = needsProxying(request.uri, request.headers, request.isDebrid);
+      let finalUrl = request.uri;
+
+      if (shouldProxy) {
+        logger.info('[CastContext] Stream needs proxying (debrid/auth detected)');
+
+        // Generate proxy URL
+        const proxyUrl = await proxyServerService.generateProxyUrl(
+          request.uri,
+          request.headers || {}
+        );
+
+        if (proxyUrl) {
+          finalUrl = proxyUrl;
+          logger.info('[CastContext] Using proxy URL for casting');
+        } else {
+          logger.warn('[CastContext] Failed to generate proxy URL, using direct URL');
+        }
+      }
+
       // Build metadata based on content type
       let metadata: MediaMetadata.Movie | MediaMetadata.TvShow;
 
@@ -202,19 +245,26 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
         };
       }
 
-      // Determine content type - better detection for various stream types
+      // Determine content type - detect based on file extension or explicit format markers
       let contentType = request.contentType;
-      const uriLower = request.uri.toLowerCase();
+      const uriLower = request.uri.toLowerCase(); // Use original URI for extension detection
+
+      // Extract path without query string for extension detection
+      const pathOnly = uriLower.split('?')[0];
 
       if (!contentType) {
-        if (uriLower.includes('.m3u8') || uriLower.includes('m3u8') || uriLower.includes('hls')) {
+        if (pathOnly.endsWith('.m3u8') || pathOnly.includes('.m3u8/')) {
           contentType = 'application/x-mpegURL';
-        } else if (uriLower.includes('.mp4')) {
+        } else if (pathOnly.endsWith('.mpd')) {
+          contentType = 'application/dash+xml';
+        } else if (pathOnly.endsWith('.mp4') || pathOnly.includes('.mp4/')) {
           contentType = 'video/mp4';
-        } else if (uriLower.includes('.mkv')) {
+        } else if (pathOnly.endsWith('.mkv')) {
           contentType = 'video/x-matroska';
-        } else if (uriLower.includes('.webm')) {
+        } else if (pathOnly.endsWith('.webm')) {
           contentType = 'video/webm';
+        } else if (pathOnly.endsWith('.avi')) {
+          contentType = 'video/x-msvideo';
         } else {
           // For redirect URLs without clear extension, try video/mp4 as most compatible
           contentType = 'video/mp4';
@@ -227,7 +277,7 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
       const streamType = isLiveStream ? MediaStreamType.LIVE : MediaStreamType.BUFFERED;
 
       const mediaInfo: MediaInfo = {
-        contentUrl: request.uri,
+        contentUrl: finalUrl, // Use proxy URL if applicable
         contentType,
         metadata,
         streamType,
@@ -240,7 +290,9 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
       };
 
       logger.info('[CastContext] Loading media:', {
-        url: request.uri.substring(0, 100) + '...',
+        url: finalUrl.substring(0, 80) + (finalUrl.length > 80 ? '...' : ''),
+        originalUrl: request.uri.substring(0, 50) + '...',
+        isProxied: shouldProxy && finalUrl !== request.uri,
         contentType,
         streamType: mediaInfo.streamType,
         title: request.title,
@@ -252,6 +304,13 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
       await client.loadMedia(loadRequest);
 
       logger.info('[CastContext] client.loadMedia completed successfully');
+
+      // Mark manual casting as active - this keeps overlay visible even if
+      // custom receivers don't report proper mediaStatus
+      setManualCastingActive(true);
+      setIsCasting(true);
+      setIsBuffering(true); // Assume buffering initially
+
       return true;
     } catch (error: any) {
       logger.error('[CastContext] Error loading media:', error?.message || error);
@@ -302,8 +361,12 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
 
     try {
       await client.stop();
+      setManualCastingActive(false);
       setIsCasting(false);
       setCurrentPosition(0);
+
+      // Clean up proxy server tokens when stopping
+      proxyServerService.revokeAllTokens();
       logger.debug('[CastContext] Stop');
     } catch (error) {
       logger.error('[CastContext] Error stopping:', error);
@@ -315,8 +378,12 @@ export const CastProvider: React.FC<CastProviderProps> = ({ children }) => {
     try {
       const sessionManager = GoogleCast.getSessionManager();
       await sessionManager.endCurrentSession(true);
+      setManualCastingActive(false);
       setIsCasting(false);
       setCurrentPosition(0);
+
+      // Stop proxy server when disconnecting
+      await proxyServerService.stop();
       logger.info('[CastContext] Disconnected from cast session');
     } catch (error) {
       logger.error('[CastContext] Error disconnecting:', error);

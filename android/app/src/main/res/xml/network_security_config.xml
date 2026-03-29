@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Allow cleartext traffic for local network communication.
+        Required for the local HTTP proxy server to stream to Chromecast.
+        Chromecast on local network requires HTTP (not HTTPS) for local proxy.
+    -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

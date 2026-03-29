@@ -156,6 +156,7 @@ export type RootStackParamList = {
     videoType?: string;
     releaseDate?: string;
     groupedEpisodes?: { [seasonNumber: number]: any[] };
+    isDebrid?: boolean;
   };
   PlayerAndroid: {
     uri: string;
@@ -177,6 +178,7 @@ export type RootStackParamList = {
     videoType?: string;
     releaseDate?: string;
     groupedEpisodes?: { [seasonNumber: number]: any[] };
+    isDebrid?: boolean;
   };
   Catalog: { id: string; type: string; addonId?: string; name?: string; genreFilter?: string };
   Credits: { mediaId: string; mediaType: string };
